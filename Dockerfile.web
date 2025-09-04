@@ -1,15 +1,23 @@
+# Dockerfile.web
 FROM python:3.12-slim-bookworm
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
+# Evita prompts
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
+# Atualiza base (rápido e seguro)
+RUN apt-get update \
+ && apt-get -y upgrade --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
+
+# Dependências Python
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+# App
 COPY main.py /app/main.py
 
+# Usuário não-root (boa prática)
 RUN useradd -m appuser
 USER appuser
 

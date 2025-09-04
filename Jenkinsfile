@@ -14,12 +14,12 @@ pipeline {
   stages {
     stage('Cleanup') {
       steps {
-        sh '''#!/usr/bin/env bash
-set -eux
-docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" down -v || true
-docker system prune -af || true
-find . -name "__pycache__" -type d -exec rm -rf {} +
-'''
+        sh '''#!/usr/bin/env sh
+          set -eux
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" down -v || true
+          docker system prune -af || true
+          find . -name "__pycache__" -type d -exec rm -rf {} + || true
+        '''
       }
     }
 
@@ -31,43 +31,62 @@ find . -name "__pycache__" -type d -exec rm -rf {} +
 
     stage('Construção') {
       steps {
-        sh '''#!/usr/bin/env bash
-set -eux
-docker build -t atividade-web -f Dockerfile.web .
-docker run --rm atividade-web python -c "import flask, sqlalchemy; print('ok')"
-'''
+        sh '''#!/usr/bin/env sh
+          set -eux
+          docker build -t atividade-web -f Dockerfile.web .
+          docker run --rm atividade-web python -c "import flask, sqlalchemy; print('ok')" 
+        '''
       }
     }
 
     stage('Entrega') {
       steps {
-        sh '''#!/usr/bin/env bash
-set -eux
+        sh '''#!/usr/bin/env sh
+          set -eux
 
-# Sobe a stack de teste (SEM publicar portas: nada conflita)
-docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" up -d --build
+          # Sobe stack de teste
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" up -d --build
 
-# Aguarda o web responder via um container curl dentro da MESMA rede
-for i in $(seq 1 30); do
-  if docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" curlimages/curl:8.7.1 -fsS http://web:8200/health >/dev/null; then
-    echo "web respondeu na tentativa $i"
-    break
-  fi
-  sleep 1
-done
+          # Aguarda DB healthy (até ~45s)
+          i=0
+          until [ "$i" -ge 45 ]; do
+            status=$(docker inspect -f '{{.State.Health.Status}}' ${COMPOSE_PROJECT_NAME}-db-1 2>/dev/null || true)
+            [ "$status" = "healthy" ] && break
+            i=$((i+1))
+            sleep 1
+          done
 
-# Mostra um trecho da home e o estado dos serviços
-docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" curlimages/curl:8.7.1 -fsS http://web:8200/ | head -n 5 || true
-docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" ps
-'''
+          # Aguarda web responder (até ~60s)
+          j=0
+          until [ "$j" -ge 60 ]; do
+            if curl -sf http://localhost:8200/ >/dev/null; then
+              echo "web respondeu na tentativa $j"
+              break
+            fi
+            j=$((j+1))
+            sleep 1
+          done
+
+          # Mostra parte da home
+          curl -sf http://localhost:8200/ | head -n 10 || true
+
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" ps
+
+          # Se web não respondeu, mostra logs e falha
+          if ! curl -sf http://localhost:8200/ >/dev/null; then
+            echo "==== DB LOGS ===="
+            docker logs ${COMPOSE_PROJECT_NAME}-db-1 || true
+            echo "==== WEB LOGS ===="
+            docker logs ${COMPOSE_PROJECT_NAME}-web-1 || true
+            exit 1
+          fi
+        '''
       }
     }
   }
 
   post {
-    success {
-      echo 'Pipeline executada com sucesso.'
-    }
+    success { echo 'Pipeline executada com sucesso.' }
     always {
       archiveArtifacts artifacts: 'docker-compose*.yml,Jenkinsfile,**/*.py,**/*.sql,**/Dockerfile*', fingerprint: true
     }
