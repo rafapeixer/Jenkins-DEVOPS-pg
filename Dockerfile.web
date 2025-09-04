@@ -1,21 +1,22 @@
-# Dockerfile.web - Python Flask app (Postgres)
 FROM python:3.12-slim-bookworm
 
-# (opcional) manter base atualizada
+# sistema enxuto e atualizado
 RUN apt-get update \
  && apt-get -y upgrade --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# dependências
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+# aplicação
 COPY main.py /app/main.py
 
-# roda como user não-root
+# usuário não-root
 RUN useradd -m appuser
 USER appuser
 
 EXPOSE 8200
-CMD ["python", "main.py"]
+CMD ["python", "/app/main.py"]
