@@ -1,3 +1,4 @@
+-- Tabela e seed para PostgreSQL
 CREATE TABLE IF NOT EXISTS atividade02 (
     id SERIAL PRIMARY KEY,
     firstname VARCHAR(30) NOT NULL,
