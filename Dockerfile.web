@@ -1,22 +1,23 @@
-# Imagem leve + atual (Debian bookworm)
+# Imagem da aplicação Flask
 FROM python:3.12-slim-bookworm
 
-# Dependências do sistema? (não precisamos de dev libs aqui)
-# Atualização de segurança mínima
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Segurança / atualizações base
 RUN apt-get update \
  && apt-get -y upgrade --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
-# App
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY main.py /app/main.py
 
-# Usuário não-root
+EXPOSE 8200
+# usuário não-root opcional
 RUN useradd -m appuser
 USER appuser
 
-EXPOSE 8200
-CMD ["python", "/app/main.py"]
+CMD ["python", "main.py"]

@@ -6,17 +6,15 @@ services:
       POSTGRES_PASSWORD: pgpass
       POSTGRES_DB: docker_e_kubernetes
     ports:
-      # deixe 5433 apenas se você realmente precisa enxergar o banco do host;
-      # em ambientes concorrentes, pode comentar esta linha para evitar “port already allocated”.
-      - "5433:5432"
+      - "5433:5432"                  # evita conflito com 5432 do host
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./codigo.sql:/docker-entrypoint-initdb.d/00_seed.sql:ro
+      - ./codigo.pg.sql:/docker-entrypoint-initdb.d/00_seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pguser -d docker_e_kubernetes"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 30
 
   web:
     build:
@@ -33,25 +31,5 @@ services:
     ports:
       - "8200:8200"
 
-  # OBS: o Jenkins da pipeline já está em outro ambiente; o container
-  # abaixo é opcional (não é necessário para a pipeline rodar).
-  # jenkins:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.jenkins
-  #   user: root
-  #   environment:
-  #     JAVA_OPTS: -Djenkins.install.runSetupWizard=false
-  #   ports:
-  #     - "8080:8080"
-  #     - "50000:50000"
-  #   volumes:
-  #     - jenkins_home:/var/jenkins_home
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - ./:/workspace
-  #   depends_on:
-  #     - db
-
 volumes:
   pgdata:
-  jenkins_home:
