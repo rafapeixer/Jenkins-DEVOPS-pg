@@ -29,23 +29,5 @@ services:
     ports:
       - "8200:8200"
 
-  jenkins:
-    build:
-      context: .
-      dockerfile: Dockerfile.jenkins
-    user: root
-    environment:
-      JAVA_OPTS: -Djenkins.install.runSetupWizard=false
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./:/workspace
-    depends_on:
-      - db
-
 volumes:
   pgdata:
-  jenkins_home:
