@@ -1,23 +1,22 @@
-FROM python:3.12-slim-bookworm AS base
+# Imagem leve + atual (Debian bookworm)
+FROM python:3.12-slim-bookworm
 
+# Dependências do sistema? (não precisamos de dev libs aqui)
+# Atualização de segurança mínima
 RUN apt-get update \
  && apt-get -y upgrade --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
+# App
 WORKDIR /app
-
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY main.py /app/main.py
 
+# Usuário não-root
 RUN useradd -m appuser
 USER appuser
 
 EXPOSE 8200
-CMD ["python", "main.py"]
+CMD ["python", "/app/main.py"]

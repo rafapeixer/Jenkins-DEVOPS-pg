@@ -1,56 +1,34 @@
-from __future__ import annotations
-
+from flask import Flask, jsonify
 import os
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Float
-from sqlalchemy.ext.declarative import declarative_base
+import time
+import psycopg2
 
-def verifica_variaveis_ambiente():
-    res = []
-    chaves = ['POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_ADDRESS', 'POSTGRES_DBNAME']
-    for chave in chaves:
-        valor = os.environ.get(chave)
-        if valor is None:
-            print("Faltou a variável de ambiente", chave)
-            raise SystemExit(1)
-        res.append(valor)
-    return res
-
-db = SQLAlchemy()
 app = Flask(__name__)
 
-username, password, server, dbname = verifica_variaveis_ambiente()
-userpass = f'postgresql+psycopg2://{username}:{password}@'
+def db_conn():
+    host_port = os.getenv("POSTGRES_ADDRESS", "db:5432")
+    host, port = host_port.split(":")
+    return psycopg2.connect(
+        host=host,
+        port=port,
+        user=os.getenv("POSTGRES_USER", "pguser"),
+        password=os.getenv("POSTGRES_PASSWORD", "pgpass"),
+        dbname=os.getenv("POSTGRES_DBNAME", "docker_e_kubernetes"),
+    )
 
-app.config['SQLALCHEMY_DATABASE_URI'] = userpass + server + '/' + dbname
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+@app.route("/")
+def home():
+    # tentativas rápidas para o caso do DB ainda estar subindo
+    for _ in range(10):
+        try:
+            with db_conn() as con, con.cursor() as cur:
+                cur.execute('SELECT COUNT(*) FROM atividade02')
+                n = cur.fetchone()[0]
+                return jsonify(ok=True, registros=n)
+        except Exception as e:
+            time.sleep(1)
+            last = str(e)
+    return jsonify(ok=False, error=last), 503
 
-db.init_app(app)
-
-Base = declarative_base()
-
-class Usuario(Base):
-    __tablename__ = 'atividade02'
-    id = Column(Integer, primary_key=True)
-    FirstName = Column(String(30), nullable=False)
-    LastName = Column(String(100))
-    Age = Column(Integer)
-    Height = Column(Float)  # será NUMERIC(4,2) no banco
-
-    def __str__(self) -> str:
-        return f"{self.FirstName} {self.LastName}, {self.Age}, {self.Height}"
-
-@app.route('/')
-def testdb():
-    try:
-        a = db.session.query(Usuario).all()
-        b = '<h1>Funciona!</h1>'
-        for line in a:
-            b += f"<h2>{line}</h2>"
-        return b
-    except Exception as e:
-        return '<h1>Something is broken.</h1>' + "<h2>The error:<br>" + str(e) + "</h2>"
-
-if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=8200)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8200)

@@ -1,9 +1,9 @@
-# Dockerfile.jenkins - Jenkins com Docker CLI, Compose v2 e Buildx
+# Jenkins LTS + Docker CLI/Compose v2/Buildx + plugins de pipeline
 FROM jenkins/jenkins:lts
 
 USER root
 
-# Repositório oficial da Docker + instalação dos CLIs (compose v2 e buildx inclusos)
+# Repo oficial Docker + CLIs
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && install -m 0755 -d /etc/apt/keyrings \
  && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
@@ -13,15 +13,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin docker-buildx-plugin \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Plugins essenciais de pipeline (timestamps, pipeline completo, git, docker)
+# Plugins essenciais de pipeline
 RUN jenkins-plugin-cli --plugins \
-    timestamper \
-    workflow-aggregator \
-    pipeline-stage-view \
-    git \
-    git-client \
-    credentials-binding \
-    docker-workflow
+      timestamper \
+      workflow-aggregator \
+      pipeline-stage-view \
+      git \
+      git-client \
+      credentials-binding \
+      docker-workflow
 
-# Mantém root para acessar /var/run/docker.sock
+# manter root facilita acesso ao /var/run/docker.sock quando mapeado
 USER root
