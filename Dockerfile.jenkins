@@ -24,4 +24,5 @@ RUN jenkins-plugin-cli --plugins \
   git \
   git-client \
   credentials-binding \
-  docker-workflow
+  docker-workflow \
+  ansicolor
