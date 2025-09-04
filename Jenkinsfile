@@ -1,22 +1,13 @@
 pipeline {
   agent any
-
-  options {
-    skipDefaultCheckout(true)
-    timestamps()
-  }
-
-  environment {
-    COMPOSE_PROJECT_NAME = "atividade-ci"
-    COMPOSE_FILE_CI      = "docker-compose.ci.yml"
-  }
+  options { timestamps() }
 
   stages {
     stage('Cleanup') {
       steps {
         sh '''
           set -eux
-          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" down -v || true
+          docker compose -p atividade-ci -f docker-compose.ci.yml down -v || true
           docker system prune -af || true
           find . -name __pycache__ -type d -exec rm -rf {} +
         '''
@@ -24,13 +15,7 @@ pipeline {
     }
 
     stage('Checkout') {
-      steps {
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: '*/main']],
-          userRemoteConfigs: [[url: 'https://github.com/rafapeixer/Jenkins-DEVOPS-pg']]
-        ])
-      }
+      steps { checkout scm }
     }
 
     stage('Construção') {
@@ -47,33 +32,18 @@ pipeline {
       steps {
         sh '''
           set -eux
+          docker compose -p atividade-ci -f docker-compose.ci.yml up -d --build
 
-          # Sobe web + db
-          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" up -d --build
-
-          echo "Aguardando DB ficar saudável..."
-          for i in $(seq 1 60); do
-            if docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" ps --format json \
-              | jq -e '.[] | select(.Service=="db") | .Health=="healthy"' > /dev/null; then
-              echo "DB saudável em $i s"
-              break
-            fi
-            sleep 1
-          done
-
-          echo "Aguardando Web responder..."
+          # espera o banco ficar OK
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:8200/ >/dev/null; then
-              echo "Web OK (tentativa $i)"
+            if docker compose -p atividade-ci -f docker-compose.ci.yml exec -T db pg_isready -U pguser -d docker_e_kubernetes; then
               break
             fi
-            sleep 1
+            sleep 2
           done
 
-          # Mostra um trecho da resposta só para evidência
-          curl -sf http://localhost:8200/ | head -n 5 || true
-
-          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" ps
+          # healthcheck da aplicação
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://localhost:8200/health
         '''
       }
     }
@@ -81,7 +51,8 @@ pipeline {
 
   post {
     always {
-      archiveArtifacts artifacts: 'docker-compose*.yml,Jenkinsfile,**/*.py,**/*.sql,**/Dockerfile*', fingerprint: true
+      archiveArtifacts artifacts: 'codigo.sql,docker-compose.ci.yml,docker-compose.yml,Dockerfile.web,Dockerfile.jenkins,Jenkinsfile,main.py,requirements.txt',
+                        fingerprint: true, allowEmptyArchive: true
     }
   }
 }

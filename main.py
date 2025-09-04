@@ -1,48 +1,44 @@
-import os
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
-
-PG_HOSTPORT = os.getenv("POSTGRES_ADDRESS", "db:5432")
-PG_USER     = os.getenv("POSTGRES_USER", "pguser")
-PG_PASS     = os.getenv("POSTGRES_PASSWORD", "pgpass")
-PG_DB       = os.getenv("POSTGRES_DB", "docker_e_kubernetes")
+from sqlalchemy import text
+import os
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql+psycopg2://{PG_USER}:{PG_PASS}@{PG_HOSTPORT}/{PG_DB}"
+
+# Env vars (prefer POSTGRES_*, aceita MYSQL_* como fallback)
+user = os.getenv("POSTGRES_USER") or os.getenv("MYSQL_USERNAME", "pguser")
+password = os.getenv("POSTGRES_PASSWORD") or os.getenv("MYSQL_PASSWORD", "pgpass")
+address = os.getenv("POSTGRES_ADDRESS") or os.getenv("MYSQL_ADDRESS", "db:5432")
+dbname = os.getenv("POSTGRES_DBNAME") or os.getenv("MYSQL_DBNAME", "docker_e_kubernetes")
+
+host, port = (address.split(":", 1) + ["5432"])[:2]
+app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-# Model ligado à tabela seedada
-class Atividade02(db.Model):
-    __tablename__ = "atividade02"
-    id = db.Column(db.Integer, primary_key=True)
-    firstname = db.Column(db.String(30), nullable=False)
-    lastname = db.Column(db.String(100))
-    age = db.Column(db.Integer)
-    height = db.Column(db.Numeric(4, 2))
-
-@app.route("/")
-def home():
+@app.get("/health")
+def health():
     try:
-        rows = Atividade02.query.order_by(Atividade02.id).limit(5).all()
-        data = [
-            dict(
-                id=r.id,
-                firstname=r.firstname,
-                lastname=r.lastname,
-                age=r.age,
-                height=float(r.height) if r.height is not None else None,
-            )
-            for r in rows
-        ]
-        return jsonify(
-            status="ok",
-            db=f"{PG_USER}@{PG_HOSTPORT}/{PG_DB}",
-            sample=data
-        )
+        db.session.execute(text("SELECT 1"))
+        return "OK", 200
     except Exception as e:
-        return jsonify(status="error", message=str(e)), 500
+        return f"DB DOWN: {e}", 500
+
+@app.get("/")
+def root():
+    try:
+        total = db.session.execute(text("SELECT COUNT(*) FROM atividade02")).scalar()
+        return jsonify(status="ok", rows=total)
+    except Exception as e:
+        return jsonify(status="error", error=str(e)), 500
+
+@app.get("/people")
+def people():
+    rows = db.session.execute(
+        text("SELECT id, firstname, lastname, age, height FROM atividade02 ORDER BY id")
+    ).mappings().all()
+    return jsonify([dict(r) for r in rows])
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8200)

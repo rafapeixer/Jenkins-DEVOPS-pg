@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:16
@@ -7,13 +5,11 @@ services:
       POSTGRES_USER: pguser
       POSTGRES_PASSWORD: pgpass
       POSTGRES_DB: docker_e_kubernetes
-    ports:
-      - "5433:5432"
     volumes:
       - pgdata_ci:/var/lib/postgresql/data
       - ./codigo.sql:/docker-entrypoint-initdb.d/00_seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pguser -d docker_e_kubernetes"]
+      test: ["CMD-SHELL", "pg_isready -U pguser -d docker_e_kubernetes || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -29,9 +25,9 @@ services:
       POSTGRES_USER: pguser
       POSTGRES_PASSWORD: pgpass
       POSTGRES_ADDRESS: db:5432
-      POSTGRES_DB: docker_e_kubernetes
+      POSTGRES_DBNAME: docker_e_kubernetes
     ports:
-      - "8200:8200"
+      - "8200:8200"   # Só o web é exposto pra validarmos /health
 
 volumes:
   pgdata_ci:
