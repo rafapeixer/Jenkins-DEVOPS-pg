@@ -2,18 +2,26 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-RUN apt-get update \
- && apt-get -y upgrade --no-install-recommends \
- && rm -rf /var/lib/apt/lists/*
+# dependências do sistema (compilar psycopg2, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+# instalar deps Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py /app/main.py
+# copiar código da aplicação
+COPY . .
 
 # usuário sem privilégio
 RUN useradd -m appuser
 USER appuser
 
 EXPOSE 8200
-CMD ["python", "/app/main.py"]
+
+# em dev:
+# CMD ["python", "main.py"]
+
+# em prod (recomendado):
+CMD ["gunicorn", "-b", "0.0.0.0:8200", "main:app"]

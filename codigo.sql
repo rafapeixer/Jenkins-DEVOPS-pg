@@ -1,43 +1,50 @@
--- força leitura em UTF-8
-SET client_encoding = 'UTF8';
-
+-- criação
 CREATE TABLE IF NOT EXISTS atividade02 (
   id SERIAL PRIMARY KEY,
-  firstname VARCHAR(30) NOT NULL,
-  lastname  VARCHAR(100),
-  age       INT,
-  height    NUMERIC(4,2)
+  firstname TEXT NOT NULL,
+  lastname  TEXT NOT NULL,
+  age       INT  NOT NULL,
+  height    NUMERIC(4,2) NOT NULL
 );
 
+-- seed idempotente
 INSERT INTO atividade02 (id, firstname, lastname, age, height) VALUES
-(1,'Emilly','Isabelle Gomes',19,1.70),
-(2,'Kevin','Davi Assis',76,1.72),
-(3,'Henry','Manuel Moreira',26,1.86),
-(4,'Alice','Letícia dos Santos',37,1.75),
-(5,'Marina','Adriana Sabrina Rezende',44,1.50),
-(6,'Lorena','Antônia Carla Novaes',71,1.65),
-(7,'Otávio','Manuel Galvão',51,1.94),
-(8,'Elias','Samuel Murilo Corte Real',49,1.88),
-(9,'Caroline','Elza Vanessa Monteiro',29,1.79),
-(10,'Hadassa','Daiane Fátima Ribeiro',66,1.57),
-(11,'Adriana','Hadassa Souza',60,1.65),
-(12,'Rafaela','Lorena Santos',40,1.59),
-(13,'Kamilly','Marli Ayla Baptista',76,1.53),
-(14,'Bianca','Louise Almada',66,1.66),
-(15,'Matheus','Yuri de Paula',30,1.65),
-(16,'André','Francisco Osvaldo Lima',49,1.71),
-(17,'Marcelo','Mateus das Neves',79,1.88),
-(18,'Mariane','Gabrielly Clara Martins',19,1.79),
-(19,'Fátima','Isabel da Rosa',47,1.70),
-(20,'Evelyn','Raquel Laís da Conceição',36,1.84),
-(21,'Renan','Arthur da Cunha',20,1.80),
-(22,'Emanuel','Samuel da Cruz',73,1.73),
-(23,'Isaac','Fábio Tiago da Silva',43,1.82),
-(24,'Calebe','Rafael Danilo Vieira',36,1.73),
-(25,'Stella','Antônia Porto',35,1.50),
-(26,'Giovanni','Calebe Brito',28,1.73),
-(27,'Alice','Clarice da Luz',51,1.57),
-(28,'Marcos','Vinicius Thales Bento Almeida',74,1.69),
-(29,'Adriana','Lúcia Bianca Alves',73,1.63),
-(30,'Milena','Heloise Francisca Gonçalves',41,1.68)
+(1,'Fulano','da Silva',20,1.75),
+(2,'Beltrano','Souza',22,1.78),
+(3,'Ciclano','Pereira',21,1.81),
+(4,'Maria','Oliveira',23,1.65),
+(5,'João','Santos',24,1.80),
+(6,'Ana','Lima',22,1.70),
+(7,'Pedro','Costa',25,1.77),
+(8,'Luiza','Almeida',21,1.68),
+(9,'Carlos','Ferreira',26,1.82),
+(10,'Julia','Gomes',20,1.60),
+(11,'Rafael','Rocha',23,1.79),
+(12,'Mariana','Carvalho',22,1.66),
+(13,'Lucas','Ribeiro',24,1.74),
+(14,'Fernanda','Teixeira',25,1.69),
+(15,'Bruno','Barbosa',21,1.83),
+(16,'Camila','Melo',22,1.72),
+(17,'Gustavo','Martins',23,1.76),
+(18,'Beatriz','Araujo',24,1.64),
+(19,'Thiago','Cardoso',25,1.85),
+(20,'Larissa','Pinto',21,1.67),
+(21,'André','Batista',22,1.73),
+(22,'Patrícia','Dias',23,1.62),
+(23,'Diego','Nogueira',24,1.80),
+(24,'Isabela','Cunha',25,1.71),
+(25,'Rodrigo','Vieira',22,1.78),
+(26,'Sophia','Ramos',23,1.63),
+(27,'Felipe','Moreira',24,1.84),
+(28,'Carolina','Lopes',25,1.70),
+(29,'Eduardo','Barros',21,1.75),
+(30,'Aline','Farias',22,1.66)
 ON CONFLICT (id) DO NOTHING;
+
+-- 🔧 alinhar sequência do SERIAL para o próximo insert
+DO $$
+DECLARE next_id bigint;
+BEGIN
+  SELECT COALESCE(MAX(id), 0) + 1 INTO next_id FROM atividade02;
+  PERFORM setval(pg_get_serial_sequence('atividade02','id'), next_id, false);
+END $$;
