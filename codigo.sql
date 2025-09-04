@@ -1,4 +1,4 @@
--- seed idempotente
+-- seed idempotente (pode rodar sempre do zero no CI)
 BEGIN;
 
 DROP TABLE IF EXISTS atividade02 CASCADE;
