@@ -8,85 +8,78 @@ pipeline {
 
   environment {
     COMPOSE_PROJECT_NAME = "atividade-ci"
-    COMPOSE_FILE = "docker-compose.ci.yml"
+    COMPOSE_FILE_CI      = "docker-compose.ci.yml"
   }
 
   stages {
     stage('Cleanup') {
       steps {
-        sh '''#!/usr/bin/env sh
+        sh '''
           set -eux
-          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" down -v || true
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" down -v || true
           docker system prune -af || true
-          find . -name "__pycache__" -type d -exec rm -rf {} + || true
+          find . -name __pycache__ -type d -exec rm -rf {} +
         '''
       }
     }
 
     stage('Checkout') {
       steps {
-        checkout scm
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: '*/main']],
+          userRemoteConfigs: [[url: 'https://github.com/rafapeixer/Jenkins-DEVOPS-pg']]
+        ])
       }
     }
 
     stage('Construção') {
       steps {
-        sh '''#!/usr/bin/env sh
+        sh '''
           set -eux
           docker build -t atividade-web -f Dockerfile.web .
-          docker run --rm atividade-web python -c "import flask, sqlalchemy; print('ok')" 
+          docker run --rm atividade-web python -c "import flask, sqlalchemy; print('ok')"
         '''
       }
     }
 
     stage('Entrega') {
       steps {
-        sh '''#!/usr/bin/env sh
+        sh '''
           set -eux
 
-          # Sobe stack de teste
-          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" up -d --build
+          # Sobe web + db
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" up -d --build
 
-          # Aguarda DB healthy (até ~45s)
-          i=0
-          until [ "$i" -ge 45 ]; do
-            status=$(docker inspect -f '{{.State.Health.Status}}' ${COMPOSE_PROJECT_NAME}-db-1 2>/dev/null || true)
-            [ "$status" = "healthy" ] && break
-            i=$((i+1))
-            sleep 1
-          done
-
-          # Aguarda web responder (até ~60s)
-          j=0
-          until [ "$j" -ge 60 ]; do
-            if curl -sf http://localhost:8200/ >/dev/null; then
-              echo "web respondeu na tentativa $j"
+          echo "Aguardando DB ficar saudável..."
+          for i in $(seq 1 60); do
+            if docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" ps --format json \
+              | jq -e '.[] | select(.Service=="db") | .Health=="healthy"' > /dev/null; then
+              echo "DB saudável em $i s"
               break
             fi
-            j=$((j+1))
             sleep 1
           done
 
-          # Mostra parte da home
-          curl -sf http://localhost:8200/ | head -n 10 || true
+          echo "Aguardando Web responder..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8200/ >/dev/null; then
+              echo "Web OK (tentativa $i)"
+              break
+            fi
+            sleep 1
+          done
 
-          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" ps
+          # Mostra um trecho da resposta só para evidência
+          curl -sf http://localhost:8200/ | head -n 5 || true
 
-          # Se web não respondeu, mostra logs e falha
-          if ! curl -sf http://localhost:8200/ >/dev/null; then
-            echo "==== DB LOGS ===="
-            docker logs ${COMPOSE_PROJECT_NAME}-db-1 || true
-            echo "==== WEB LOGS ===="
-            docker logs ${COMPOSE_PROJECT_NAME}-web-1 || true
-            exit 1
-          fi
+          docker compose -p "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE_CI" ps
         '''
       }
     }
   }
 
   post {
-    success { echo 'Pipeline executada com sucesso.' }
     always {
       archiveArtifacts artifacts: 'docker-compose*.yml,Jenkinsfile,**/*.py,**/*.sql,**/Dockerfile*', fingerprint: true
     }

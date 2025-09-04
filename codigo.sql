@@ -1,12 +1,7 @@
--- seed idempotente (pode rodar sempre do zero no CI)
-BEGIN;
-
-DROP TABLE IF EXISTS atividade02 CASCADE;
-
-CREATE TABLE atividade02 (
+CREATE TABLE IF NOT EXISTS atividade02 (
     id SERIAL PRIMARY KEY,
     firstname VARCHAR(30) NOT NULL,
-    lastname  VARCHAR(100),
+    lastname VARCHAR(100),
     age INT,
     height NUMERIC(4,2)
 );
@@ -41,13 +36,5 @@ INSERT INTO atividade02 (id, firstname, lastname, age, height) VALUES
 (27, 'Alice', 'Clarice da Luz', 51, 1.57),
 (28, 'Marcos', 'Vinicius Thales Bento Almeida', 74, 1.69),
 (29, 'Adriana', 'Lúcia Bianca Alves', 73, 1.63),
-(30, 'Milena', 'Heloise Francisca Gonçalves', 41, 1.68);
-
--- alinha a sequência com o maior id
-SELECT setval(
-  pg_get_serial_sequence('atividade02','id'),
-  COALESCE((SELECT MAX(id) FROM atividade02), 0) + 1,
-  false
-);
-
-COMMIT;
+(30, 'Milena', 'Heloise Francisca Gonçalves', 41, 1.68)
+ON CONFLICT (id) DO NOTHING;

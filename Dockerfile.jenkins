@@ -1,10 +1,10 @@
-# Dockerfile.jenkins - Jenkins com Docker CLI, Compose v2 e Buildx
 FROM jenkins/jenkins:lts
 
 USER root
 
-# Docker CLI + compose-plugin + buildx-plugin
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+# Docker CLI + plugins do Compose/Buildx dentro do container do Jenkins
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && install -m 0755 -d /etc/apt/keyrings \
  && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
  && chmod a+r /etc/apt/keyrings/docker.gpg \
@@ -13,14 +13,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin docker-buildx-plugin \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Plugins básicos de pipeline
+# Plugins básicos de Pipeline + Git + Docker
 RUN jenkins-plugin-cli --plugins \
-  timestamper \
-  workflow-aggregator \
-  pipeline-stage-view \
-  git \
-  git-client \
-  credentials-binding \
-  docker-workflow
+    timestamper \
+    workflow-aggregator \
+    pipeline-stage-view \
+    git \
+    git-client \
+    credentials-binding \
+    docker-workflow
 
-USER root
+USER jenkins
