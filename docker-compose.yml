@@ -35,7 +35,9 @@ services:
       - "8200:8200"
 
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
     container_name: jenkins-ci
     user: root
     environment:
