@@ -7,8 +7,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     && chmod a+r /etc/apt/keyrings/docker.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release; echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin docker-buildx-plugin \
+    && apt-get install -y --no-install-recommends \
+         git \
+         docker-ce-cli docker-compose-plugin docker-buildx-plugin \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# (opcional) se você NÃO rodar o serviço como root no docker-compose:
+# garanta acesso ao /var/run/docker.sock
+# RUN groupadd -g 999 docker || true && usermod -aG docker jenkins
 
 USER jenkins
 RUN jenkins-plugin-cli --plugins \

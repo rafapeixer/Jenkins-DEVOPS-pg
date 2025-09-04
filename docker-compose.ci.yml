@@ -5,29 +5,28 @@ services:
       POSTGRES_USER: pguser
       POSTGRES_PASSWORD: pgpass
       POSTGRES_DB: docker_e_kubernetes
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
     volumes:
       - pgdata_ci:/var/lib/postgresql/data
       - ./codigo.sql:/docker-entrypoint-initdb.d/00_seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pguser -d docker_e_kubernetes || exit 1"]
+      test: ["CMD-SHELL","pg_isready -U pguser -d docker_e_kubernetes"]
       interval: 5s
       timeout: 5s
       retries: 30
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
+    build: { context: ., dockerfile: Dockerfile.web }
     depends_on:
-      db:
-        condition: service_healthy
+      db: { condition: service_healthy }
     environment:
       POSTGRES_USER: pguser
       POSTGRES_PASSWORD: pgpass
       POSTGRES_ADDRESS: db:5432
       POSTGRES_DBNAME: docker_e_kubernetes
-    ports:
-      - "8200:8200"   # Só o web é exposto pra validarmos /health
+    command: ["python","/app/main.py"]
 
 volumes:
   pgdata_ci:
