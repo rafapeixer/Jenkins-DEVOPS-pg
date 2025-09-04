@@ -1,32 +1,40 @@
--- Seed compatível com PostgreSQL (rodará apenas no primeiro start do volume)
--- O banco já é criado pelo POSTGRES_DB. Não use 'USE ...' no Postgres.
-
-CREATE TABLE IF NOT EXISTS atividade02(
-  id INTEGER PRIMARY KEY,
-  firstname VARCHAR(30) NOT NULL,
-  lastname  VARCHAR(100),
-  age       INTEGER,
-  height    NUMERIC(4,2)
+CREATE TABLE IF NOT EXISTS atividade02 (
+    id SERIAL PRIMARY KEY,
+    firstname VARCHAR(30) NOT NULL,
+    lastname VARCHAR(100),
+    age INT,
+    height NUMERIC(4,2)
 );
 
 INSERT INTO atividade02 (id, firstname, lastname, age, height) VALUES
-(1,'Emilly','Isabelle Gomes',19,1.70),
-(2,'Kaio','Roberto Castro',26,1.71),
-(3,'Stella','Beatriz Nunes',26,1.71),
-(4,'Caroline','Mirella Dias',21,1.53),
-(5,'Cecília','Heloísa Almeida',36,1.81),
-(6,'Lorenzo','Luan Lima',30,1.66),
-(7,'Emanuel','Paulo Ribeiro',18,1.79),
-(8,'Elisa','Thaís Rocha',33,1.70),
-(9,'Larissa','Maya Gomes',32,1.62),
-(10,'Kevin','Igor da Paz',22,1.64),
-(11,'Erick','Breno Gonçalves',24,1.61),
-(12,'Isis','Rebeca Fernandes',29,1.78),
-(13,'Arthur','Emanuel da Mata',24,1.62),
-(14,'Maysa','Sophia Correia',23,1.73),
-(15,'Guilherme','Guilherme Pinto',22,1.56),
-(16,'Marcos','Roberto Ferreira',31,1.58),
-(17,'Cauê','Rodrigues',20,1.60),
-(18,'Kauã','Cardoso',35,1.84),
-(19,'Isis','da Costa',28,1.79),
-(20,'Marisa','Mendes',32,1.68);
+(1, 'Emilly', 'Isabelle Gomes', 19, 1.70),
+(2, 'Kevin', 'Davi Assis', 76, 1.72),
+(3, 'Henry', 'Manuel Moreira', 26, 1.86),
+(4, 'Alice', 'Letícia dos Santos', 37, 1.75),
+(5, 'Marina', 'Adriana Sabrina Rezende', 44, 1.50),
+(6, 'Lorena', 'Antônia Carla Novaes', 71, 1.65),
+(7, 'Otávio', 'Manuel Galvão', 51, 1.94),
+(8, 'Elias', 'Samuel Murilo Corte Real', 49, 1.88),
+(9, 'Caroline', 'Elza Vanessa Monteiro', 29, 1.79),
+(10, 'Hadassa', 'Daiane Fátima Ribeiro', 66, 1.57),
+(11, 'Adriana', 'Hadassa Souza', 60, 1.65),
+(12, 'Rafaela', 'Lorena Santos', 40, 1.59),
+(13, 'Kamilly', 'Marli Ayla Baptista', 76, 1.53),
+(14, 'Bianca', 'Louise Almada', 66, 1.66),
+(15, 'Matheus', 'Yuri de Paula', 30, 1.65),
+(16, 'André', 'Francisco Osvaldo Lima', 49, 1.71),
+(17, 'Marcelo', 'Mateus das Neves', 79, 1.88),
+(18, 'Mariane', 'Gabrielly Clara Martins', 19, 1.79),
+(19, 'Fátima', 'Isabel da Rosa', 47, 1.70),
+(20, 'Evelyn', 'Raquel Laís da Conceição', 36, 1.84),
+(21, 'Renan', 'Arthur da Cunha', 20, 1.80),
+(22, 'Emanuel', 'Samuel da Cruz', 73, 1.73),
+(23, 'Isaac', 'Fábio Tiago da Silva', 43, 1.82),
+(24, 'Calebe', 'Rafael Danilo Vieira', 36, 1.73),
+(25, 'Stella', 'Antônia Porto', 35, 1.50),
+(26, 'Giovanni', 'Calebe Brito', 28, 1.73),
+(27, 'Alice', 'Clarice da Luz', 51, 1.57),
+(28, 'Marcos', 'Vinicius Thales Bento Almeida', 74, 1.69),
+(29, 'Adriana', 'Lúcia Bianca Alves', 73, 1.63),
+(30, 'Milena', 'Heloise Francisca Gonçalves', 41, 1.68)
+ON CONFLICT (id) DO NOTHING;
