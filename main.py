@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 from typing import Any, Dict, List
+from html import escape
 
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -77,7 +78,7 @@ def health() -> Any:
 def index() -> Any:
     """
     Lista registros com paginação simples e total.
-    Parâmetros de query: ?limit=5&offset=0
+    Parâmetros: ?limit=5&offset=0
     Retorna JSON: {"total": N, "preview": [...]}
     """
     # Sanitização simples (default: 5/0)
@@ -104,9 +105,54 @@ def index() -> Any:
         {"limit": limit, "offset": offset},
     ).mappings().all()
 
-    # Converte RowMapping -> dict
     preview: List[Dict[str, Any]] = [dict(r) for r in rows]
     return jsonify({"total": total, "preview": preview}), 200
+
+@app.get("/ui")
+def ui() -> Any:
+    """
+    Tabela HTML simples com até N registros (default 20).
+    Parâmetros: ?limit=20&offset=0
+    """
+    try:
+        limit = max(1, min(100, int(request.args.get("limit", 20))))
+    except Exception:
+        limit = 20
+    try:
+        offset = max(0, int(request.args.get("offset", 0)))
+    except Exception:
+        offset = 0
+
+    rows = db.session.execute(
+        text("""
+            SELECT id, firstname, lastname, age, height
+            FROM atividade02
+            ORDER BY id
+            LIMIT :limit OFFSET :offset
+        """),
+        {"limit": limit, "offset": offset},
+    ).mappings().all()
+
+    html = [
+        "<!doctype html><meta charset='utf-8'>",
+        "<style>body{font-family:Arial,Helvetica,sans-serif;margin:24px}table{border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px}th{background:#f4f6f8}</style>",
+        "<h1>Atividade02 (PostgreSQL)</h1>",
+        f"<p><b>Total visualizado:</b> {len(rows)} &nbsp; <b>offset:</b> {offset}</p>",
+        "<table><tr><th>ID</th><th>FirstName</th><th>LastName</th><th>Age</th><th>Height</th></tr>",
+    ]
+    for r in rows:
+        html.append(
+            "<tr>"
+            f"<td>{r['id']}</td>"
+            f"<td>{escape(str(r['firstname']))}</td>"
+            f"<td>{escape(str(r['lastname']))}</td>"
+            f"<td>{r['age']}</td>"
+            f"<td>{r['height']}</td>"
+            "</tr>"
+        )
+    html.append("</table>")
+    html.append("<p><a href='/'>Ver JSON</a> | <a href='/health'>Health</a></p>")
+    return "".join(html), 200
 
 # =============================================================================
 # Bootstrap local (em container use GUnicorn)
