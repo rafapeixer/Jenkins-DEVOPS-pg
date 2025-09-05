@@ -1,18 +1,18 @@
 services:
   db:
     image: postgres:16
-    container_name: pg-ci
+    # container_name: pg-ci   # (opcional) evite para não confundir o DNS; o nome "db" funciona melhor
     environment:
       POSTGRES_USER: pguser
       POSTGRES_PASSWORD: pgpass
       POSTGRES_DB: docker_e_kubernetes
     ports:
-      - "5433:5432"
+      - "5433:5432"   # acesso a partir do host (Jenkins usa a rede interna)
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./codigo.sql:/docker-entrypoint-initdb.d/00_seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pguser -d docker_e_kubernetes"]
+      test: ["CMD-SHELL", "pg_isready -U pguser -d docker_e_kubernetes || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -21,14 +21,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
-    container_name: web-ci
+    # container_name: web-ci  # (opcional) evite para garantir que o serviço responda por "web"
     depends_on:
       db:
         condition: service_healthy
     environment:
       POSTGRES_USER: pguser
       POSTGRES_PASSWORD: pgpass
-      POSTGRES_ADDRESS: db:5432
+      POSTGRES_ADDRESS: db:5432        # <— use SEMPRE o nome do serviço "db"
       POSTGRES_DBNAME: docker_e_kubernetes
     ports:
       - "8200:8200"
@@ -37,7 +37,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.jenkins
-    container_name: jenkins-ci
+    container_name: jenkins-ci          # mantido, pois você já usa esse nome
     user: root
     environment:
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false

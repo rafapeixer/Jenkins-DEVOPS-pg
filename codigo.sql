@@ -41,10 +41,10 @@ INSERT INTO atividade02 (id, firstname, lastname, age, height) VALUES
 (30,'Aline','Farias',22,1.66)
 ON CONFLICT (id) DO NOTHING;
 
--- 🔧 alinhar sequência do SERIAL para o próximo insert
-DO $$
-DECLARE next_id bigint;
-BEGIN
-  SELECT COALESCE(MAX(id), 0) + 1 INTO next_id FROM atividade02;
-  PERFORM setval(pg_get_serial_sequence('atividade02','id'), next_id, false);
-END $$;
+-- alinhar sequência do SERIAL ao maior id existente (idempotente)
+-- (próximo nextval() será MAX(id)+1)
+SELECT setval(
+  pg_get_serial_sequence('atividade02','id'),
+  COALESCE((SELECT MAX(id) FROM atividade02), 0),
+  true
+);
