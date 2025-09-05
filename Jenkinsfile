@@ -7,69 +7,53 @@ pipeline {
   }
 
   stages {
-
     stage('Cleanup') {
       steps {
-        // usa shebang + bash; nada de "bash -lc '...'"
         sh '''#!/usr/bin/env bash
 set -eu
 docker compose -p atividade-ci -f docker-compose.ci.yml down -v || true
 docker system prune -af || true
-find . -name "__pycache__" -type d -exec rm -rf {} +
+find . -name __pycache__ -type d -exec rm -rf {} +
 '''
       }
     }
 
     stage('Checkout') {
-      steps {
-        checkout scm
-      }
+      steps { checkout scm }
     }
 
     stage('Construção') {
       steps {
-        // mesmo padrão de cima (sem aspas aninhadas)
+        // 1º: sobe o ambiente e builda imagens
         sh '''#!/usr/bin/env bash
 set -euo pipefail
-
-# sobe o ambiente de CI (builda imagens)
 docker compose -p atividade-ci -f docker-compose.ci.yml up -d --build
-
-# espera o Postgres ficar saudável
+'''
+        // 2º: espera o Postgres ficar OK (sem "\" no fim da linha)
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
 for i in $(seq 1 30); do
-  if docker compose -p atividade-ci -f docker-compose.ci.yml exec -T db \
-       pg_isready -U pguser -d docker_e_kubernetes >/dev/null 2>&1; then
-    echo "Postgres saudável."
-    break
+  if docker compose -p atividade-ci -f docker-compose.ci.yml exec -T db pg_isready -U pguser -d docker_e_kubernetes >/dev/null 2>&1; then
+    echo "Postgres saudável."; exit 0
   fi
-  echo "Aguardando Postgres (${i}/30)..."
-  sleep 2
+  echo "Aguardando Postgres ($i/30) ..."; sleep 2
 done
-
-# falha explicitamente se não estiver saudável
-docker compose -p atividade-ci -f docker-compose.ci.yml exec -T db \
-  pg_isready -U pguser -d docker_e_kubernetes
+echo "DB não respondeu a tempo."; exit 1
 '''
       }
     }
 
     stage('Entrega') {
       steps {
-        // faz o curl de DENTRO do container web (evita problema de rede/localhost)
+        // Faz os curls de DENTRO do container web
         sh '''#!/usr/bin/env bash
 set -euo pipefail
-
-# smoke tests do web (exec dentro do container)
-docker compose -p atividade-ci -f docker-compose.ci.yml exec -T web \
-  curl --fail --silent http://localhost:8200/health >/dev/null
-
-docker compose -p atividade-ci -f docker-compose.ci.yml exec -T web \
-  curl --fail --silent http://localhost:8200/ >/dev/null
-
+docker compose -p atividade-ci -f docker-compose.ci.yml exec -T web curl --fail --silent http://localhost:8200/health >/dev/null
+docker compose -p atividade-ci -f docker-compose.ci.yml exec -T web curl --fail --silent http://localhost:8200/        >/dev/null
 echo "===== LOG DB ====="
-docker compose -p atividade-ci -f docker-compose.ci.yml logs --no-color db  | tail -n +200 || true
+docker compose -p atividade-ci -f docker-compose.ci.yml logs --no-color db  | tail -n +1 || true
 echo "===== LOG WEB ====="
-docker compose -p atividade-ci -f docker-compose.ci.yml logs --no-color web | tail -n +200 || true
+docker compose -p atividade-ci -f docker-compose.ci.yml logs --no-color web | tail -n +1 || true
 '''
       }
     }
